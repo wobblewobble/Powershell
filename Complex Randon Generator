@@ -1,0 +1,65 @@
+# More complex with troubleshooting
+
+# Record the start time
+$startTime = Get-Date
+
+# Get the number of processor cores (suggested parallelism)
+$coreCount = (Get-CimInstance -ClassName Win32_ComputerSystem).NumberOfLogicalProcessors
+
+# Number of iterations
+$iterations = 100000000 # Let's use a larger value for testing
+
+# Number of runspaces to use (adjust as needed, but don't exceed logical cores significantly)
+$runspaceCount = $coreCount # Or a smaller number if you prefer
+
+# Create an array to hold the iteration counts for each runspace
+$ranges = @()
+$base = 0
+$iterationsPerRunspace = [int]($iterations / $runspaceCount)
+$remainder = $iterations % $runspaceCount
+
+for ($i = 0; $i -lt $runspaceCount; $i++) {
+    $count = $iterationsPerRunspace
+    if ($i -lt $remainder) {
+        $count++
+    }
+    $ranges += [pscustomobject]@{ Start = $base; Count = $count; Id = $i + 1 }
+    $base += $count
+}
+
+# Run the random number generation in parallel
+$ranges | ForEach-Object -Parallel {
+    param($_) # Each object from $ranges will be in $_
+
+    # Define the function INSIDE the parallel script block
+    function Generate-RandomNumbers ($Range) {
+        Write-Host -ForegroundColor Yellow "Runspace $($Range.Id): Starting loop for $($Range.Count) iterations."
+        $innerStartTime = Get-Date
+        for ($i = 0; $i -lt $Range.Count; $i++) {
+            $randomNumber = Get-Random
+            # Uncomment the line below ONLY for very small iteration counts for debugging
+            # Write-Host -ForegroundColor Gray "Runspace $($Range.Id): Generated $($randomNumber)"
+        }
+        $innerEndTime = Get-Date
+        $innerTimeTaken = $innerEndTime - $innerStartTime
+        Write-Host -ForegroundColor Green "Runspace $($Range.Id): Finished loop in $($innerTimeTaken.TotalSeconds) seconds."
+    }
+
+    # Now call the function
+    Generate-RandomNumbers $_
+
+} -ThrottleLimit $runspaceCount
+
+# Record the end time
+$endTime = Get-Date
+
+# Calculate the total time taken
+$timeTaken = $endTime - $startTime
+
+# Output the overall results
+Write-Host -ForegroundColor Green "Parallel loop completed."
+Write-Host -ForegroundColor Green "Start Time: $($startTime)"
+Write-Host -ForegroundColor Green "End Time: $($endTime)"
+Write-Host -ForegroundColor Green "Total Time Taken: $($timeTaken.TotalSeconds) seconds"
+Write-Host -ForegroundColor Green "Number of Cores Used (Logical): $($coreCount)"
+Write-Host -ForegroundColor Green "Number of Runspaces Used: $($runspaceCount)"
