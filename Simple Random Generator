@@ -1,0 +1,27 @@
+# Simple Random Generator
+
+# Record the start time
+$startTime = Get-Date
+
+# Get the number of processor cores
+$coreCount = (Get-CimInstance -ClassName Win32_ComputerSystem).NumberOfLogicalProcessors
+
+# Loop to 100,000,000 and generate a random number
+for ($i = 0; $i -lt 100000000; $i++) {
+    $randomNumber = Get-Random
+    # You can comment out the line below if you don't need to store each random number
+    # $randomNumbers += $randomNumber
+}
+
+# Record the end time
+$endTime = Get-Date
+
+# Calculate the total time taken
+$timeTaken = $endTime - $startTime
+
+# Output the results
+Write-Host "Loop completed."
+Write-Host "Start Time: $($startTime)"
+Write-Host "End Time: $($endTime)"
+Write-Host "Time Taken: $($timeTaken.TotalSeconds) seconds"
+Write-Host "Number of Cores Used: $($coreCount)"
